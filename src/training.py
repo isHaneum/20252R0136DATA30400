@@ -103,71 +103,103 @@ def main():
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
 
-#phase 1: silver label로 사전학습
+    # Training 루프: Silver Label -> Self-Training -> Final Training
+    
+    # 1. Silver Label로 사전학습
     print("1. Pretraining with Silver Labels")
-
-    #train dataset, loader 생성
     train_dataset = GraphDataset(config.TRAIN_EMB_PATH, silver_labels, num_classes=real_num_classes)
     train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
-
-    #사전학습 루프
-    for epoch in range(config.PRETRAIN_EPOCHS):
+    
+    best_loss = float('inf')
+    no_improvement_count = 0
+    
+    for epoch in range(config.MAX_TRAINING_ITERATIONS):
         avg_loss = train_model(model, train_loader, criterion, optimizer, device)
-        print(f"Epoch {epoch+1}/{config.PRETRAIN_EPOCHS}, Loss: {avg_loss:.4f}")
+        print(f"Pretraining Epoch {epoch+1}/{config.MAX_TRAINING_ITERATIONS}, Loss: {avg_loss:.4f}")
+        
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            no_improvement_count = 0
+        else:
+            no_improvement_count += 1
+            print(f"   No improvement. Count: {no_improvement_count}/{config.EARLY_STOPPING_PATIENCE}")
+            
+        if no_improvement_count >= config.EARLY_STOPPING_PATIENCE:
+            print("Early stopping triggered for Pretraining.")
+            break
 
-#phase 2: 전체 훈련대이터 추론
-    print("2. selftraing(pseudo labeling)")
-
-    #dataset 다시 load x, 기존 tensor 사용
+    # 2. Self-Training
+    print("\n2. Self-Training")
     train_emb_data = torch.load(config.TRAIN_EMB_PATH)
-
-    #embeddings와 pids 가져오기
     all_embeddings = train_emb_data['embeddings'].to(device)
     all_pids = train_emb_data['pids']
-
-    model.eval()
-    pseudo_labels = silver_labels.copy()#기존 silver label 복사
-    add_count = 0
-
-
-    with torch.no_grad():
-        batch_size = config.BATCH_SIZE
-        for i in tqdm(range(0, all_embeddings.size(0), batch_size), desc="Generating Pseudo Labels"):
-            #batch 단위로 처리
-            batch_embs = all_embeddings[i:i+batch_size]
-            batch_pids = all_pids[i:i+batch_size]
-            #logits 계산, probs 계산(sigmoid)
-            logits = model(batch_embs)
-            probs = torch.sigmoid(logits)
-
-            mask = probs > config.PSEUDO_LABEL_THRESHOLD
-
-            #각 문서에 대해 확신하는 라벨 추가
-            for j, is_confident in enumerate(mask):
-                pid = all_pids[i+j]
-            
-                #기존에 label 없는 문서에 대해서만
-                if pid not in pseudo_labels:
-                    high_conf_idxs = torch.where(is_confident)[0].cpu().tolist()
-                    if high_conf_idxs:
-                        pseudo_labels[pid] = high_conf_idxs
-                        add_count += 1
-
-    print(f"Added {add_count} pseudo-labeled samples.")
-
-
-    #5. 최종 전체 데이터로 모델 재학습
-    print("3. Final Training with Silver + Pseudo Labels")
-
-    if add_count > 0:
-        #새로운 dataset, loader 생성
+    
+    pseudo_labels = silver_labels.copy()
+    best_loss = float('inf')
+    no_improvement_count = 0
+    
+    for iteration in range(config.MAX_TRAINING_ITERATIONS):
+        # Pseudo Label 생성
+        model.eval()
+        add_count = 0
+        with torch.no_grad():
+            batch_size = config.BATCH_SIZE
+            for i in tqdm(range(0, all_embeddings.size(0), batch_size), desc=f"Generating Pseudo Labels (Iter {iteration+1})"):
+                batch_embs = all_embeddings[i:i+batch_size]
+                logits = model(batch_embs)
+                probs = torch.sigmoid(logits)
+                
+                mask = probs > config.PSEUDO_LABEL_THRESHOLD
+                for j, is_confident in enumerate(mask):
+                    pid = all_pids[i+j]
+                    if pid not in pseudo_labels:
+                        high_conf_idxs = torch.where(is_confident)[0].cpu().tolist()
+                        if high_conf_idxs:
+                            pseudo_labels[pid] = high_conf_idxs
+                            add_count += 1
+                            
+        print(f"Added {add_count} pseudo-labeled samples in iteration {iteration + 1}")
+        
+        # 학습
         final_dataset = GraphDataset(config.TRAIN_EMB_PATH, pseudo_labels, num_classes=real_num_classes)
         final_loader = DataLoader(final_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
+        
+        avg_loss = train_model(model, final_loader, criterion, optimizer, device)
+        print(f"Self-Training Iteration {iteration+1}/{config.MAX_TRAINING_ITERATIONS}, Loss: {avg_loss:.4f}")
+        
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            no_improvement_count = 0
+        else:
+            no_improvement_count += 1
+            print(f"   No improvement. Count: {no_improvement_count}/{config.EARLY_STOPPING_PATIENCE}")
+            
+        if no_improvement_count >= config.EARLY_STOPPING_PATIENCE:
+            print("Early stopping triggered for Self-Training.")
+            break
 
-        #재학습 루프
-        for epoch in range(config.PRETRAIN_EPOCHS):
-            avg_loss = train_model(model, final_loader, criterion, optimizer, device)
-            print(f"Epoch {epoch+1}/{config.PRETRAIN_EPOCHS}, Loss: {avg_loss:.4f}")
+    # 3. Final Training
+    print("\n3. Final Training with Silver + Pseudo Labels")
+    final_dataset = GraphDataset(config.TRAIN_EMB_PATH, pseudo_labels, num_classes=real_num_classes)
+    final_loader = DataLoader(final_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
+    
+    best_loss = float('inf')
+    no_improvement_count = 0
+    
+    for epoch in range(config.MAX_TRAINING_ITERATIONS):
+        avg_loss = train_model(model, final_loader, criterion, optimizer, device)
+        print(f"Final Training Epoch {epoch+1}/{config.MAX_TRAINING_ITERATIONS}, Loss: {avg_loss:.4f}")
+        
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            no_improvement_count = 0
+        else:
+            no_improvement_count += 1
+            print(f"   No improvement. Count: {no_improvement_count}/{config.EARLY_STOPPING_PATIENCE}")
+            
+        if no_improvement_count >= config.EARLY_STOPPING_PATIENCE:
+            print("Early stopping triggered for Final Training.")
+            break
     
     check_dir(config.MODEL_DIR)
     model_save_path = os.path.join(config.MODEL_DIR, "final_gcn_model.pt")

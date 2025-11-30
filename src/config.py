@@ -49,7 +49,15 @@ GRAD_CLIP_NORM = 1.0
 DROPOUT = 0.2
 
 # Pseudo-label / self-training
-PSEUDO_LABEL_THRESHOLD = 0.9
+PSEUDO_LABEL_THRESHOLD = 0.7
+
+# Self-Training 설정
+SELF_TRAIN_EPOCHS = 5  # Self-Training 반복 횟수
 
 # Paths
+# 현재 디렉토리에는 'best_model.pth' 파일이 존재함 (inference에서 확인)
 BEST_MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pth")
+
+# Early stopping 설정
+EARLY_STOPPING_PATIENCE = 5  # 성능 향상이 없을 경우 중단 기준
+MAX_TRAINING_ITERATIONS = 100  # 최대 반복 횟수

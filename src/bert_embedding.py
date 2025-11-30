@@ -7,7 +7,7 @@ from utils import seed_everything, check_dir
 
 # 
 BATCH_SIZE = 64
-MAX_LEN = 128
+MAX_LEN = 512
 
 
 # 평균 풀링 함수
