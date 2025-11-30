@@ -1,0 +1,17 @@
+# .gitignore
+
+# 데이터셋 및 모델 제외 (용량 문제)
+data/
+models/
+output/
+*.csv
+*.pth
+*.pt
+
+# Python 캐시 및 환경 설정 제외
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.env
+venv/
+.vscode/
