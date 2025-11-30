@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import json
 import warnings
@@ -14,6 +15,14 @@ warnings.filterwarnings("ignore")
 from transformers import logging
 logging.set_verbosity_error()
 
+
+
+
+def check_dir(path):
+    #경로가 없으면 폴더를 생성
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"📂 Created directory: {path}")
 
 def seed_everything(seed=42):
     import random as _random
