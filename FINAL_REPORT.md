@@ -23,6 +23,8 @@ Automated product categorization is critical for modern e-commerce platforms man
 ### 1.2 Problem Definition
 Given an unlabeled corpus of product descriptions $D$ and a taxonomy graph $\mathcal{T} = (C, E)$, the goal is to learn a mapping $f: D \rightarrow \{0, 1\}^{|C|}$. Predictions must satisfy the hierarchy constraint: if a category $c$ is predicted ($y_c=1$), its ancestors must also be predicted ($y_{Pa(c)}=1$).
 
+In our dataset, $|C|=531$ categories (from `classes.txt`).
+
 In this project setting, each document is constrained to output **exactly 2 or 3 labels**.
 
 ### 1.3 Contributions
@@ -100,11 +102,11 @@ Standard thresholding can yield structurally inconsistent predictions. Our infer
 3. **Optional extra leaf (only when 3 labels are required but the path has length 2)**: add the highest-probability leaf label not already included if its probability exceeds a threshold (0.4).
 	- If no leaf exceeds the threshold, we fall back to the best remaining leaf to satisfy the “exactly 2 or 3 labels” requirement.
 
-This yields hierarchy-consistent outputs for the taxonomy depth used in this dataset.
+This yields hierarchy-consistent outputs under the course’s cardinality rule. Although the taxonomy depth can reach 4 in this dataset, we intentionally restrict outputs to 2–3 labels.
 
 ## 6. Experimental Results
 ### 6.1 Experimental Setup
-- Dataset: Amazon products (1,945 train / 489 test)
+- Dataset: Amazon products (29,487 train / 19,658 test)
 - Metrics: Samples-F1 (Kaggle Evaluation)
 - Implementation: PyTorch + HuggingFace Transformers, fixed random seed (42)
 

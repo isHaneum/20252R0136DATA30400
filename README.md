@@ -2,7 +2,7 @@
 
 **GNN-Enhanced Amazon Product Categorization Pipeline**
 
-This repository implements a complete pipeline for hierarchical multi-label text classification using GNN-enhanced logit refinement. The system classifies Amazon product descriptions into a 31-category taxonomy without ground-truth labels.
+This repository implements a complete pipeline for hierarchical multi-label text classification using GNN-enhanced logit refinement. The system classifies Amazon product descriptions into a 531-category taxonomy without ground-truth labels.
 
 ---
 
@@ -48,7 +48,7 @@ project_llm/
 │   ├── llm_utils.py              # LLM API integration
 │   └── utils.py                  # Helper functions
 ├── Amazon_products/              # Dataset
-│   ├── classes.txt               # Category definitions (31 classes)
+│   ├── classes.txt               # Category definitions (531 classes)
 │   ├── class_hierarchy.txt       # Taxonomy structure
 │   ├── class_related_keywords.txt
 │   ├── train/train_corpus.txt    # Training documents
