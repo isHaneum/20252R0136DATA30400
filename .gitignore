@@ -1,0 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Trained models (large files - download separately)
+student_gnn/
+models/
+*.pt
+*.bin
+*.safetensors
+
+# Artifacts that can be regenerated
+artifacts/candidates_*.jsonl
+artifacts/silver_*.jsonl
+artifacts/graph.json
+artifacts/sanity_report.txt
+artifacts/train_sweep.jsonl
+
+# Keep llm_calls/ logs for reproducibility (but not keys)
+artifacts/llm_calls/*.key
+
+# Output files
+output/*.csv
+
+# API keys (NEVER commit!)
+*.key
+openai.key
+gemini.key
+**/gemini.key
+**/openai.key
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large embeddings
+*.npy
+*.npz
+embeddings/
+
+# Logs
+*.log
+
+# Test outputs
+tests/__pycache__/

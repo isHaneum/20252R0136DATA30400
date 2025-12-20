@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import os
-import matplotlib.pyplot as plt
 import json
-import warnings
-import numpy as np
 import random
+import warnings
+from datetime import datetime, timezone
+from typing import Any, Dict, Iterable, List
+
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
 from collections import defaultdict
 import itertools
-import torch
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -16,38 +21,69 @@ from transformers import logging
 logging.set_verbosity_error()
 
 
+def ensure_dir(path: str) -> None:
+    if path and not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
 
 
-def check_dir(path):
-    #경로가 없으면 폴더를 생성
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
+def read_text(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def write_text(path: str, text: str) -> None:
+    ensure_dir(os.path.dirname(path))
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def read_jsonl(path: str) -> List[Dict[str, Any]]:
     if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"📂 Created directory: {path}")
-
-def seed_everything(seed=42):
-    import random as _random
-    import numpy as _np
-    import torch as _torch
-
-    _random.seed(seed)
-    _np.random.seed(seed)
-    _torch.manual_seed(seed)
-    _torch.cuda.manual_seed_all(seed)
-    # _torch.backends.cudnn.deterministic = True  
-    # _torch.backends.cudnn.benchmark = False
+        return []
+    out: List[Dict[str, Any]] = []
+    with open(path, "r", encoding="utf-8") as f:
+        for raw in f:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                out.append(json.loads(raw))
+            except Exception:
+                continue
+    return out
 
 
+def write_jsonl(path: str, rows: Iterable[Dict[str, Any]]) -> None:
+    ensure_dir(os.path.dirname(path))
+    with open(path, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-# ------------------------
-# Visualization
-# ------------------------
+
+def append_jsonl(path: str, rows: Iterable[Dict[str, Any]]) -> None:
+    ensure_dir(os.path.dirname(path))
+    with open(path, "a", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
 
 def plot_results(results_dict, split="valid", metric='Accuracy'):
     """
     Plot metric values over epochs for multiple models.
-    
+
     Args:
-        results_dict: dict of dicts. 
+        results_dict: dict of dicts.
             Example: results_dict["valid"]["mlp_partial"] = [0.8, 0.82, ...]
         split: "valid" or "test"
         metric: name of the metric to display
@@ -67,86 +103,18 @@ def plot_results(results_dict, split="valid", metric='Accuracy'):
     plt.show()
 
 
-# ------------------------
-# Printing evaluation results
-# ------------------------
-
 def print_eval_result(metrics: dict, stage="val", is_improved=False):
     """
     Print evaluation results (accuracy, F1-macro).
-    
+
     Args:
         metrics: dict with keys 'accuracy' and 'f1_macro'
         stage: string label (e.g., "val", "test")
         is_improved: mark with '*' if results improved
     """
     star = " *" if is_improved else ""
-    print(f"[{stage.upper():4}] Acc: {metrics['accuracy']:.4f} | "
-          f"F1-macro: {metrics['f1_macro']:.4f}{star}")
+    print(f"[{stage.upper():4}] Acc: {metrics['accuracy']:.4f} | F1-macro: {metrics['f1_macro']:.4f}{star}")
 
-
-def print_eval_result_esci(metrics: dict, stage="val", is_improved=False):
-    """
-    Print evaluation results including per-class accuracy for ESCI labels.
-    
-    Args:
-        metrics: dict with 'accuracy', 'f1_macro', and optionally 'per_class_accuracy'
-        stage: string label (e.g., "val", "test")
-        is_improved: mark with '*' if results improved
-    """
-    star = " *" if is_improved else ""
-    print(f"[{stage.upper():4}] Acc: {metrics['accuracy']:.4f} | "
-          f"F1-macro: {metrics['f1_macro']:.4f}{star}")
-
-    # Print per-class accuracy if available
-    if "per_class_accuracy" in metrics:
-        id2label = {0: "E", 1: "S", 2: "C", 3: "I"}
-        per_class_acc_str = [
-            f"{id2label[cls_id]}: {acc:.4f}" 
-            for cls_id, acc in metrics["per_class_accuracy"].items()
-        ]
-        print("        " + " | ".join(per_class_acc_str))
-
-
-# ------------------------
-# Data loading utilities
-# ------------------------
-
-def load_json(path):
-    """Load JSON file into Python object."""
-    with open(path) as f:
-        return json.load(f)
-
-def load_queries(path):
-    """Load queries from JSONL file -> {qid: query_text}."""
-    qid2text = {}
-    with open(path, "r") as f:
-        for line in f:
-            obj = json.loads(line)
-            qid2text[int(obj["query_id"])] = obj["query"].strip()
-    return qid2text
-
-def load_corpus(path):
-    """Load corpus -> {pid: title + text}."""
-    pid2text = {}
-    with open(path, "r") as f:
-        for line in f:
-            obj = json.loads(line)
-            full_text = (obj["title"] + " " + obj["text"]).strip()
-            pid2text[obj["_id"]] = full_text
-    return pid2text
-
-def dict2list(id2text):
-    """
-    Convert a {id: text} dict into two aligned lists.
-    
-    Returns:
-        ids: list of keys
-        texts: list of values
-    """
-    ids = list(id2text.keys())
-    texts = [id2text[i] for i in ids]
-    return ids, texts
 
 def build_leaf_adj(id2label, label2id, decay=0.01, max_edges=10):
     """
@@ -161,30 +129,24 @@ def build_leaf_adj(id2label, label2id, decay=0.01, max_edges=10):
     Returns:
         A_hat (torch.FloatTensor): normalized adjacency matrix (D^{-1/2} A D^{-1/2})
     """
-
-    # --- 1) Store ancestor paths for each leaf ---
-    # e.g., "A > B > C" → ["A", "A > B"]
     leaf2ancestors = {}
     for leaf_id, full_path in id2label.items():
         parts = full_path.split(" > ")
         ancestors = [" > ".join(parts[:d]) for d in range(1, len(parts))]
         leaf2ancestors[leaf_id] = ancestors
 
-    # --- 2) Initialize adjacency matrix (with self-loops) ---
     n_labels = len(label2id)
     A = np.eye(n_labels, dtype=np.float32)
 
     all_ids = list(id2label.keys())
 
-    # --- 3) Find common ancestors for each leaf pair and assign weights ---
-    edges_by_node = defaultdict(list)  # {u: [(v, weight), ...]}
+    edges_by_node = defaultdict(list)
     for u, v in itertools.combinations(all_ids, 2):
         anc_u, anc_v = set(leaf2ancestors[u]), set(leaf2ancestors[v])
         common = anc_u.intersection(anc_v)
         if not common:
             continue
 
-        # Weight based on the deepest common ancestor
         max_depth = max(len(c.split(" > ")) for c in common)
         depth_u = len(id2label[u].split(" > "))
         weight = decay ** (depth_u - max_depth)
@@ -193,14 +155,12 @@ def build_leaf_adj(id2label, label2id, decay=0.01, max_edges=10):
         edges_by_node[iu].append((iv, weight))
         edges_by_node[iv].append((iu, weight))
 
-    # --- 4) Keep only top-k edges per node ---
     for u, neigh_list in edges_by_node.items():
         top_neighbors = sorted(neigh_list, key=lambda x: x[1], reverse=True)[:max_edges]
         for v, w in top_neighbors:
             A[u, v] = max(A[u, v], w)
             A[v, u] = max(A[v, u], w)
 
-    # --- 5) Normalize adjacency (GCN-style) ---
     D = np.sum(A, axis=1)
     D_inv_sqrt = np.diag(1.0 / np.sqrt(D + 1e-8))
     A_hat = D_inv_sqrt @ A @ D_inv_sqrt
