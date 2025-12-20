@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+# 역할 role: retrieve cands
+# 순서 order: first stage
+# 왜 why: narrow labels
+
 import argparse
 import json
 import logging

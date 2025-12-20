@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+# 역할 role: llm calls
+# 순서 order: optional refine
+# 왜 why: pick 2-3 ids
+
 import json
 import logging
 import os

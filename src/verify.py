@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+# 역할 role: verify csv
+# 순서 order: final step
+# 왜 why: submit safe
+
 import argparse
 import csv
 import logging

@@ -1,15 +1,8 @@
 #!/usr/bin/env python
-"""Minimal pipeline runner (official guideline aligned).
-
-Flow:
-  1) Retrieval candidates (TF-IDF over class name+keywords)
-  2) Optional LLM silver labeling (<= 1000 calls, prompts/outputs saved to files)
-  3) Train student classifier on silver labels
-  4) Inference on test set -> submission with exactly 2 or 3 labels per doc
-  5) Verify submission format and row count
-
-This runner intentionally avoids extra stages to keep the code simple and stable.
-"""
+# 역할 role: pipeline runner
+# 순서 order: retrieval→silver→gnn
+# 왜 why: one command run
+"""Pipeline runner (GNN-only)."""
 from __future__ import annotations
 
 import argparse
@@ -84,8 +77,7 @@ def main() -> None:
     pipeline_start = time.time()
 
     stages: list[tuple[str, str, list[str] | None]] = [
-        ("[1/5] Candidate Retrieval", "retrieval.py", None),
-        ("[2/5] Graph Build", "graph_build.py", None),
+        ("[1/4] Candidate Retrieval", "retrieval.py", None),
     ]
 
     silver_args: list[str] = []
@@ -96,14 +88,14 @@ def main() -> None:
     if args.use_llm:
         silver_args.append("--use-llm")
 
-    stages.append(("[3/5] Silver Labeling", "silver_labeling.py", silver_args or None))
+    stages.append(("[2/4] Silver Labeling", "silver_labeling.py", silver_args or None))
 
     # Default pipeline uses the GNN classifier end-to-end.
     # Run from src/; use project-root relative paths for saved model directory.
-    stages.append(("[4/5] Training (GNN)", "gnn_classifier.py", ["--save-dir", "..\\student_gnn"]))
+    stages.append(("[3/4] Training (GNN)", "gnn_classifier.py", ["--save-dir", "..\\student_gnn"]))
     stages.append(
         (
-            "[5/5] Inference (GNN)",
+            "[4/4] Inference (GNN)",
             "gnn_inference.py",
             [
                 "--model-dir",

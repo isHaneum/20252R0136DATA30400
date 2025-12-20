@@ -1,16 +1,8 @@
-"""
-GNN Classifier Inference Script
+"""GNN inference + submission."""
 
-Perform inference on test data using trained GNN model.
-
-Usage:
-    python src/gnn_inference.py --model-dir student_gnn --output output/final_submission.csv
-
-Colab Usage:
-    python src/gnn_inference.py --model-dir /content/drive/MyDrive/project_llm/student_gnn \
-        --data-dir /content/drive/MyDrive/project_llm/Amazon_products \
-        --output /content/drive/MyDrive/project_llm/output/final_submission.csv
-"""
+# 역할 role: inference submit
+# 순서 order: after training
+# 왜 why: make final csv
 
 from __future__ import annotations
 
@@ -103,10 +95,8 @@ def _resolve_model_dir(model_dir: str, project_root: str) -> str:
     )
 
 
-"""NOTE
-We intentionally import `GNNMultiLabelClassifier` from `gnn_classifier.py`.
-Do NOT duplicate model definitions here; otherwise state_dict keys/shapes diverge.
-"""
+# NOTE: keep model class single
+# 이유 why: state_dict match
 
 
 # ============================================================================
@@ -222,9 +212,9 @@ def predict(
         Rule:
         - Start from top-1 predicted label (primary).
         - Expand upward using the taxonomy (parent, grandparent) up to 3 labels.
-        - If we still have fewer than the requested count, add one extra *leaf* label
-          (highest probability among leaves not already included) with prob >= 0.4.
-        - If still short (e.g., taxonomy has no parent and no confident extra leaf), pad by duplication.
+                - If we still have fewer than the requested count, add one extra *leaf* label.
+                    Prefer prob >= 0.4; if none meets the threshold, fall back to the best remaining leaf.
+                - If still short (rare), fall back to the best remaining labels by probability.
         """
 
         max_labels = int(max_len)
@@ -247,23 +237,54 @@ def predict(
             chosen.append(parent)
             cur = parent
 
-        # Add a single extra leaf label if we need more
-        if len(chosen) < max_labels:
-            included = set(chosen)
+        included = set(chosen)
+
+        def _is_leaf(cid: str) -> bool:
+            return not (cid in parent2children and len(parent2children.get(cid, [])) > 0)
+
+        # Add extra labels until we reach the requested count.
+        while len(chosen) < max_labels:
+            need_leaf = True
+
+            # 1) Prefer a leaf with prob >= 0.4
+            picked: str | None = None
             for idx in order[1:]:
                 cid = str(id2label[int(idx.item())])
                 if cid in included:
                     continue
-                # leaf: no children
-                if cid in parent2children and len(parent2children.get(cid, [])) > 0:
+                if need_leaf and not _is_leaf(cid):
                     continue
                 if float(prob_vec[int(idx.item())].item()) >= 0.4:
-                    chosen.append(cid)
+                    picked = cid
                     break
 
-        # Pad/truncate to exact length
-        while len(chosen) < max_labels:
-            chosen.append(primary)
+            # 2) Fallback: best remaining leaf (regardless of threshold)
+            if picked is None:
+                for idx in order[1:]:
+                    cid = str(id2label[int(idx.item())])
+                    if cid in included:
+                        continue
+                    if need_leaf and not _is_leaf(cid):
+                        continue
+                    picked = cid
+                    break
+
+            # 3) Final fallback: best remaining label
+            if picked is None:
+                for idx in order[1:]:
+                    cid = str(id2label[int(idx.item())])
+                    if cid in included:
+                        continue
+                    picked = cid
+                    break
+
+            # 4) Absolute last resort (should never happen with >=2 labels)
+            if picked is None:
+                picked = primary
+
+            chosen.append(picked)
+            included.add(picked)
+
         return chosen[:max_labels]
     
     model.eval()

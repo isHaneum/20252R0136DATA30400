@@ -1,19 +1,8 @@
-"""
-GNN-Enhanced Multi-Label Classifier
+"""Train text encoder + label-GNN."""
 
-Proper GNN Usage:
-1. Text Encoder (DeBERTa) → 768-dim text embedding
-2. Standard Classification Head → 31 class logits
-3. GNN Layer (2-layer, Skip Connection) → Label relationship modeling
-
-Key Idea:
-- GNN **refines output logits** (not classifier weights!)
-- Initial prediction → GNN for label relationship → Final prediction
-- Skip connection preserves original prediction
-
-Usage:
-    python src/gnn_classifier.py
-"""
+# 역할 role: train gnn
+# 순서 order: after silver
+# 왜 why: learn classifier
 
 from __future__ import annotations
 

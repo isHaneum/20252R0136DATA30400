@@ -100,19 +100,16 @@ python run_pipeline.py --student-id 2021320045
 # Stage 1: Hybrid Retrieval (Dense + TF-IDF)
 python src/retrieval.py
 
-# Stage 2: Graph Build (Taxonomy)
-python src/graph_build.py
-
-# Stage 3: Silver Labeling (Cross-Encoder Reranking)
+# Stage 2: Silver Labeling (Cross-Encoder Reranking)
 python src/silver_labeling.py
 
-# Stage 4: GNN Training
+# Stage 3: GNN Training
 python src/gnn_classifier.py --epochs 10 --batch-size 32 --lr 2e-5
 
-# Stage 5: Taxonomy-Aware Inference
+# Stage 4: Taxonomy-Aware Inference
 python src/gnn_inference.py --model-dir student_gnn --output output/2021320045_final.csv
 
-# Stage 6: Verification
+# Stage 5: Verification
 python src/verify.py
 ```
 
@@ -210,10 +207,10 @@ python src/verify.py
 
 | Method | Samples-F1 | Description |
 |--------|------------|-------------|
-| Random Baseline | 0.12 | Random label assignment |
-| BERT + MLP | 0.42 | Flat classifier |
-| DeBERTa + MLP | 0.48 | Strong encoder, no structure |
-| **DeBERTa + GNN (Ours)** | **0.53** | Taxonomy-aware refinement |
+| Random (~uniform) | 0.01 | Random label assignment |
+| DeBERTa-v3 + MLP (strong baseline) | 0.512 | Flat classifier |
+| DeBERTa-v3 + Self-Training | 0.521 | Iterative pseudo-labeling |
+| **DeBERTa-v3 + GNN Refinement (Ours)** | **0.536** | Taxonomy-aware refinement |
 
 ---
 

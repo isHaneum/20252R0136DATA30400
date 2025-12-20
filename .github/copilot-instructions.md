@@ -2,7 +2,7 @@
 
 ## Big picture (data flow)
 - Entry point: `run_pipeline.py` runs stages from `src/` with `PYTHONPATH=src`.
-- Pipeline: retrieval candidates → taxonomy graph build → silver labeling (bi-encoder + optional reranker + optional LLM refinement) → GNN training → GNN inference → submission verification.
+- Pipeline: retrieval candidates → silver labeling (bi-encoder + optional reranker + optional LLM refinement) → GNN training → GNN inference → submission verification.
 - Dataset is expected in `Amazon_products/` (within repo) by default; paths are centralized in `src/config.py` (`Paths`).
 
 ## How to run (Windows-friendly)

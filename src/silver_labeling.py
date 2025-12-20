@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+# 역할 role: silver labels
+# 순서 order: after retrieval
+# 왜 why: train targets
+
 import argparse
 import json
 import logging

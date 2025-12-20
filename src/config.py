@@ -1,18 +1,18 @@
+# 역할 role: config settings
+# 순서 order: used everywhere
+# 왜 why: single source
 from __future__ import annotations
 
 import os
-import torch
 from dataclasses import dataclass, field
 
 
 @dataclass
 class Paths:
     project_root: str = field(default_factory=lambda: os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    data_dir: str = ""  # set in __post_init__
 
+    data_dir: str = ""  # set in __post_init__
     artifacts_dir: str = ""  # set in __post_init__
-    embeddings_dir: str = ""  # set in __post_init__
-    model_dir: str = ""  # set in __post_init__
     output_dir: str = ""  # set in __post_init__
 
     classes_file: str = ""  # set in __post_init__
@@ -30,17 +30,12 @@ class Paths:
     llm_calls_jsonl: str = ""  # set in __post_init__
     openai_key_file: str = ""  # set in __post_init__
 
-    graph_file: str = ""  # set in __post_init__
-
     submission_file: str = ""  # set in __post_init__
-
     def __post_init__(self) -> None:
         self.project_root = os.path.abspath(self.project_root)
         self.data_dir = os.path.abspath(self.data_dir or os.path.join(self.project_root, "Amazon_products"))
 
         self.artifacts_dir = os.path.abspath(os.path.join(self.project_root, "artifacts"))
-        self.embeddings_dir = os.path.abspath(os.path.join(self.artifacts_dir, "embeddings"))
-        self.model_dir = os.path.abspath(os.path.join(self.project_root, "models"))
         self.output_dir = os.path.abspath(os.path.join(self.project_root, "output"))
 
         self.classes_file = os.path.join(self.data_dir, "classes.txt")
@@ -61,16 +56,8 @@ class Paths:
         self.llm_calls_jsonl = os.path.join(self.llm_dir, "llm_calls.jsonl")
         self.openai_key_file = os.path.join(self.llm_dir, "openai.key")
 
-        self.graph_file = os.path.join(self.artifacts_dir, "graph.json")
-
         student_id = os.getenv("STUDENT_ID", "2021320045")
         self.submission_file = os.path.join(self.output_dir, f"{student_id}_final.csv")
-
-        # Additional paths from the other configuration
-        self.train_emb_path = os.path.join(self.embeddings_dir, "train_emb.pt")
-        self.test_emb_path = os.path.join(self.embeddings_dir, "test_emb.pt")
-        self.label_emb_path = os.path.join(self.embeddings_dir, "label_emb.pt")
-        self.best_model_path = os.path.join(self.model_dir, "best_model.pth")
 
 
 @dataclass

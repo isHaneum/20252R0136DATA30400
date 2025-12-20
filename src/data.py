@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+# 역할 role: data parse
+# 순서 order: shared input
+# 왜 why: unify formats
+
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
