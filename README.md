@@ -10,19 +10,19 @@ This repository implements a complete pipeline for hierarchical multi-label text
 
 ```
 [Phase 1: Silver Label Generation]
-Train Docs → Hybrid Retrieval (BGE-M3 + TF-IDF) → Top-50 Candidates
+Train Docs → Hybrid Retrieval (Dense + TF-IDF) → Top-k Candidates
     → Cross-Encoder Reranking (bge-reranker-v2-m3) → Margin Selection (2-3 labels)
     → Optional LLM Refinement (low confidence only) → Silver Labels
 
 [Phase 2: Model Training]
-Silver Labels + Taxonomy Graph → DeBERTa-v3 Encoder (frozen layers 0-9)
-    → Linear Classifier → GNN Logit Refinement (2-layer GCN)
-    → Skip Connection (α=0.3) → Focal Loss Training → Trained Model
+Silver Labels + Taxonomy Graph → DeBERTa-v3 Encoder
+    → Linear Classifier → Label-Graph Logit Refinement (GNN)
+    → Learnable Skip Blend → Focal Loss Training → Trained Model
 
 [Phase 3: Inference]
 Test Docs → Trained Model → Probability Vector
     → Best Leaf Selection → Taxonomy Path Expansion [Leaf, Parent, Grandparent]
-    → Extra Leaf Addition (if prob ≥ 0.5) → Final Prediction (2-4 labels)
+    → Optional Extra Leaf Addition (if prob ≥ 0.4) → Final Prediction (2-3 labels)
 ```
 
 **Key Design Principles:**
@@ -53,13 +53,9 @@ project_llm/
 │   ├── class_related_keywords.txt
 │   ├── train/train_corpus.txt    # Training documents
 │   └── test/test_corpus.txt      # Test documents
-├── artifacts/                    # Generated artifacts
-│   ├── candidates_*.jsonl        # Retrieval candidates
-│   ├── silver_simple.jsonl       # Silver labels
-│   ├── graph.json                # Taxonomy graph
-│   └── llm_calls/                # LLM API logs (generated; not committed)
-├── student_gnn/                  # Trained GNN model
-├── output/                       # Final predictions
+├── artifacts/                    # Generated artifacts (created at runtime; not committed)
+├── student_gnn/                  # Trained GNN model (created at runtime; not committed)
+├── output/                       # Final predictions (created at runtime; not committed)
 ├── run.sh                        # Full pipeline script (bash)
 ├── run_pipeline.py               # Pipeline runner (Python)
 ├── requirements.txt              # Dependencies
@@ -95,7 +91,7 @@ bash run.sh --student-id 2021320045
 
 **Option B: Using Python runner**
 ```bash
-python run_pipeline.py --student-id 2021320045 --use-gnn
+python run_pipeline.py --student-id 2021320045
 ```
 
 ### 3. Run Individual Stages
@@ -127,13 +123,13 @@ python src/verify.py
 ### Stage 1: Hybrid Retrieval
 - **Dense Encoder**: BAAI/bge-m3 for semantic similarity
 - **Sparse Encoder**: TF-IDF for keyword matching
-- **Fusion**: Reciprocal Rank Fusion (RRF)
+- **Fusion (implemented)**: union of dense + TF-IDF candidates, then dense similarity reranking over the union
 - **Output**: Top-50 candidate categories per document
 
 ### Stage 2: Silver Labeling
 - **Cross-Encoder**: BAAI/bge-reranker-v2-m3 for precise ranking
 - **Selection**: Margin-based 2-3 label selection
-- **LLM Refinement**: Optional Gemini API for ambiguous cases
+- **LLM Refinement**: Optional OpenAI API for ambiguous cases (selection-only)
 - **Output**: High-quality pseudo-labels
 
 ### Stage 3: GNN-Enhanced Training
@@ -144,8 +140,8 @@ python src/verify.py
 
 ### Stage 4: Taxonomy-Aware Inference
 - **Path Expansion**: [Primary → Parent → Grandparent] (up to 3 labels)
-- **Extra Label**: Add one leaf if probability ≥ 0.5
-- **Output**: 2-4 hierarchically consistent labels per document
+- **Extra Label**: Add one leaf if probability ≥ 0.4 (only when outputting 3 labels)
+- **Output**: Exactly 2 or 3 hierarchically consistent labels per document
 
 ---
 
@@ -160,7 +156,7 @@ Key hyperparameters (configurable via CLI or `src/config.py`):
 | `learning_rate` | 2e-5 | Learning rate |
 | `epochs` | 10 | Number of training epochs |
 | `max_length` | 192 | Max sequence length |
-| `threshold` | 0.5 | Extra label selection threshold |
+| `threshold` | 0.4 | Extra leaf selection threshold |
 | `gnn_hidden` | 256 | GNN hidden dimension |
 
 ---
@@ -190,9 +186,23 @@ Note: these logs can contain sensitive information (prompts/metadata). Do not co
 
 ## External Resources
 
-Large files are available via Google Drive:
-- **Trained Model**: [student_gnn/](https://drive.google.com/placeholder)
-- **Pre-computed Embeddings**: [artifacts/](https://drive.google.com/placeholder)
+Large files are available via Google Drive (not committed to GitHub):
+
+- **Artifacts** (candidates/silver/LLM logs produced by runs):
+    - https://drive.google.com/drive/folders/1iGQ1zRRA-52wA_ANZnFt_P1-SPj4ik6P?usp=sharing
+    - Place into: `project_llm/artifacts/`
+- **Models** (optional, legacy/extra checkpoints):
+    - https://drive.google.com/drive/folders/1JNVaGedbOfWcbMUG4EY-0I2FQx7Jz1mo?usp=drive_link
+    - Place into: `project_llm/models/` (only needed if you use other scripts/checkpoints)
+- **student_gnn** (required if you want to run inference without retraining):
+    - https://drive.google.com/drive/folders/1LCzwxno4xmSDOTjsOolC_PZAsimf0beH?usp=drive_link
+    - Place into: `project_llm/student_gnn/`
+
+If you download `student_gnn/`, you can run:
+```bash
+python src/gnn_inference.py --model-dir student_gnn --student-id 2021320045
+python src/verify.py
+```
 
 ---
 
