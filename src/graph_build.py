@@ -76,7 +76,7 @@ def main() -> None:
     if args.build_matrix:
         adj = build_adjacency_matrix()
         if adj is not None:
-            print(f"✅ Adjacency Matrix Created: {adj.shape}")
+            print(f"Adjacency matrix created: {adj.shape}")
     else:
         d = parse_all(cfg.paths)
         edges, nodes = build_graph(d.child2parents)

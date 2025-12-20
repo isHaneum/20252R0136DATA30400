@@ -680,7 +680,7 @@ def main():
     model_path = config.BEST_MODEL_PATH  # config에서 경로 가져오기
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path, map_location=device))
-        print("✅ Model weights loaded.")
+        print("Model weights loaded.")
     else:
         print("❌ Model weights not found. Please train first.")
         return

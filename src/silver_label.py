@@ -108,7 +108,7 @@ def main():# silver label 생성
     # 결과 저장
     with open(config.SILVER_LABEL_PATH, 'w', encoding='utf-8') as f:
         json.dump(silver_labels, f)
-    print(f"✅ Saved {len(silver_labels)} silver labels to {config.SILVER_LABEL_PATH}")# 확인
+    print(f"Saved {len(silver_labels)} silver labels to {config.SILVER_LABEL_PATH}")
 
 if __name__ == "__main__":
     main()

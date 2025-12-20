@@ -89,7 +89,7 @@ def extract_embeddings(file_path, save_name):
     # final tensor 생성
     final_tensor = torch.cat(all_embs, dim=0)#
     torch.save({'pids': pids, 'embeddings': final_tensor}, save_path)
-    print(f"✅ Saved embeddings to {save_path} (Shape: {final_tensor.shape})") #확인
+    print(f"Saved embeddings to {save_path} (shape: {final_tensor.shape})")
 
 def main():
     seed_everything(config.SEED)

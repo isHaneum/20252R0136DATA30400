@@ -4,10 +4,10 @@
 **Student ID**: 2021320045
 
 ## 핵심 변경사항 (v2)
-- ✅ Inference threshold: 0.6 → **0.4** 변경
-- ✅ Colab A100 GPU 최적화 노트북 생성: `colab_pipeline.ipynb`
-- ✅ 불필요한 중간 파일 정리 (silver_full, silver_leaf, silver_seed 등)
-- ✅ Gemini API 토큰/Rate Limit 정보 확인 및 최적화
+- Inference threshold: 0.6 → **0.4** 변경
+- Colab A100 GPU 최적화 노트북 생성: `colab_pipeline.ipynb`
+- 불필요한 중간 파일 정리 (silver_full, silver_leaf, silver_seed 등)
+- Gemini API 토큰/Rate Limit 정보 확인 및 최적화
 
 ---
 

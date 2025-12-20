@@ -43,18 +43,11 @@ models/
 *.bin
 *.safetensors
 
-# Artifacts that can be regenerated
-artifacts/candidates_*.jsonl
-artifacts/silver_*.jsonl
-artifacts/graph.json
-artifacts/sanity_report.txt
-artifacts/train_sweep.jsonl
-
-# Keep llm_calls/ logs for reproducibility (but not keys)
-artifacts/llm_calls/*.key
+# Generated artifacts (reproducible; do not commit)
+artifacts/
 
 # Output files
-output/*.csv
+output/
 
 # API keys (NEVER commit!)
 *.key
@@ -71,9 +64,16 @@ Thumbs.db
 *.npy
 *.npz
 embeddings/
+data/embeddings/
+**/embeddings/
+
+# Local data caches / duplicates (generated during experiments)
+data/Amazon_products/
+data/silver_labels.json
 
 # Logs
 *.log
+logs/
 
 # Test outputs
 tests/__pycache__/

@@ -1006,7 +1006,7 @@ def main():
     check_dir(config.MODEL_DIR)
     model_save_path = os.path.join(config.MODEL_DIR, "final_gcn_model.pt")
     torch.save(model.state_dict(), model_save_path)
-    print(f"✅ Final model saved to {model_save_path}")
+    print(f"Final model saved to {model_save_path}")
 
 if __name__ == "__main__":
     main()

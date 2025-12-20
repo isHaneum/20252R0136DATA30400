@@ -6,7 +6,7 @@ This repository implements a complete pipeline for hierarchical multi-label text
 
 ---
 
-## 📋 Pipeline Blueprint
+## Pipeline Blueprint
 
 ```
 [Phase 1: Silver Label Generation]
@@ -29,11 +29,11 @@ Test Docs → Trained Model → Probability Vector
 - LLM calls are **optional** and **selection-only** (never generates new labels)
 - LLM is used only for **low-confidence silver labeling**, not during inference
 - All predictions respect **hierarchical consistency** via path expansion
-- Label count is **exactly 2-4** per document
+- Label count is **exactly 2 or 3** per document
 
 ---
 
-## 📋 Project Structure
+## Project Structure
 
 ```
 project_llm/
@@ -57,7 +57,7 @@ project_llm/
 │   ├── candidates_*.jsonl        # Retrieval candidates
 │   ├── silver_simple.jsonl       # Silver labels
 │   ├── graph.json                # Taxonomy graph
-│   └── llm_calls/                # LLM API logs (required)
+│   └── llm_calls/                # LLM API logs (generated; not committed)
 ├── student_gnn/                  # Trained GNN model
 ├── output/                       # Final predictions
 ├── run.sh                        # Full pipeline script (bash)
@@ -68,7 +68,7 @@ project_llm/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Environment Setup
 
@@ -122,7 +122,7 @@ python src/verify.py
 
 ---
 
-## 📊 Pipeline Architecture
+## Pipeline Architecture
 
 ### Stage 1: Hybrid Retrieval
 - **Dense Encoder**: BAAI/bge-m3 for semantic similarity
@@ -149,7 +149,7 @@ python src/verify.py
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 Key hyperparameters (configurable via CLI or `src/config.py`):
 
@@ -165,7 +165,7 @@ Key hyperparameters (configurable via CLI or `src/config.py`):
 
 ---
 
-## 🔬 Reproducibility
+## Reproducibility
 
 All random seeds are fixed:
 ```python
@@ -177,16 +177,18 @@ torch.cuda.manual_seed_all(42)
 
 ---
 
-## 📝 LLM API Logs
+## LLM API Logs
 
-All LLM API calls are logged to `artifacts/llm_calls/` as required:
+All LLM API calls are logged under `artifacts/llm_calls/`:
 - `llm_calls.jsonl`: Metadata (timestamps, model, token counts)
 - `requests/<call_id>/prompt.txt`: Input prompts
 - `requests/<call_id>/response.txt`: Model responses
 
+Note: these logs can contain sensitive information (prompts/metadata). Do not commit them.
+
 ---
 
-## 📁 External Resources
+## External Resources
 
 Large files are available via Google Drive:
 - **Trained Model**: [student_gnn/](https://drive.google.com/placeholder)
@@ -194,7 +196,7 @@ Large files are available via Google Drive:
 
 ---
 
-## 📈 Experimental Results
+## Experimental Results
 
 | Method | Samples-F1 | Description |
 |--------|------------|-------------|
@@ -205,23 +207,23 @@ Large files are available via Google Drive:
 
 ---
 
-## 📄 Submission Format
+## Submission Format
 
 Output CSV (`output/<STUDENT_ID>_final.csv`):
 - **Header**: `id,label`
-- **Labels**: Comma-separated category IDs (2-4 per document)
+- **Labels**: Comma-separated category IDs (2 or 3 per document)
 
 Example:
 ```csv
 id,label
 0,"5,12,28"
 1,"3,7"
-2,"1,4,15,22"
+2,"1,4,15"
 ```
 
 ---
 
-## 📚 References
+## References
 
 1. He et al., "DeBERTa: Decoding-enhanced BERT with Disentangled Attention", ICLR 2021
 2. Chen et al., "BGE M3-Embedding", 2024
