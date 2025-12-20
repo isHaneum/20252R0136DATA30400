@@ -60,11 +60,6 @@ def main() -> None:
     parser.add_argument("--force", action="store_true", help="Force re-run LLM labeling even if silver files exist")
     parser.add_argument("--skip-llm", action="store_true", help="Skip LLM labeling stage (uses existing silver_simple.jsonl)")
     parser.add_argument("--use-llm", action="store_true", help="Enable LLM refinement (<=1000 calls, prompts/responses saved)")
-    parser.add_argument(
-        "--use-gnn",
-        action="store_true",
-        help="Use the GNN classifier for training + inference (gnn_classifier.py/gnn_inference.py) instead of the baseline student model.",
-    )
     args = parser.parse_args()
 
     # Set student ID from args or environment
@@ -103,28 +98,21 @@ def main() -> None:
 
     stages.append(("[3/5] Silver Labeling", "silver_labeling.py", silver_args or None))
 
-    if bool(args.use_gnn):
-        # Run from src/; use project-root relative paths for saved model directory.
-        stages.append(("[4/5] Training (GNN)", "gnn_classifier.py", ["--save-dir", "..\\student_gnn"]))
-        stages.append(
-            (
-                "[5/5] Inference (GNN)",
-                "gnn_inference.py",
-                [
-                    "--model-dir",
-                    "..\\student_gnn",
-                    "--student-id",
-                    student_id,
-                ],
-            )
+    # Default pipeline uses the GNN classifier end-to-end.
+    # Run from src/; use project-root relative paths for saved model directory.
+    stages.append(("[4/5] Training (GNN)", "gnn_classifier.py", ["--save-dir", "..\\student_gnn"]))
+    stages.append(
+        (
+            "[5/5] Inference (GNN)",
+            "gnn_inference.py",
+            [
+                "--model-dir",
+                "..\\student_gnn",
+                "--student-id",
+                student_id,
+            ],
         )
-    else:
-        stages.append(("[4/5] Training", "training.py", None))
-        infer_args: list[str] = []
-        if args.use_llm:
-            infer_args.append("--use-llm")
-
-        stages.append(("[5/5] Inference", "inference.py", infer_args or None))
+    )
 
     timings = []
     for name, script, stage_args in stages:

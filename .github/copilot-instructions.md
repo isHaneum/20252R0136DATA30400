@@ -2,7 +2,7 @@
 
 ## Big picture (data flow)
 - Entry point: `run_pipeline.py` runs stages from `src/` with `PYTHONPATH=src`.
-- Pipeline: retrieval candidates → taxonomy graph build → silver labeling (bi-encoder + optional reranker + optional LLM refinement) → multi-label training → inference → submission verification.
+- Pipeline: retrieval candidates → taxonomy graph build → silver labeling (bi-encoder + optional reranker + optional LLM refinement) → GNN training → GNN inference → submission verification.
 - Dataset is expected in `Amazon_products/` (within repo) by default; paths are centralized in `src/config.py` (`Paths`).
 
 ## How to run (Windows-friendly)
@@ -20,8 +20,8 @@
 - `src/silver_labeling.py`: writes `artifacts/silver_simple.jsonl` rows like `{id,text,labels,conf}`.
   - Always outputs **2 or 3 labels** per doc (course rule).
   - Optional OpenAI refinement is selection-only and must choose from candidates.
-- `src/training.py`: trains HF `AutoModelForSequenceClassification` (multi-label) and saves a `label2id.json` mapping to prevent label index drift.
-- `src/inference.py`: produces per-doc label strings and optionally refines ambiguous docs via OpenAI batching.
+- `src/gnn_classifier.py`: trains the GNN-enhanced multi-label classifier and saves `label2id.json`, `model_state.pt`, and `edge_index.pt`.
+- `src/gnn_inference.py`: produces per-doc label strings and writes the submission CSV.
 - `src/verify.py`: enforces submission schema + label validity + row count.
 
 ## LLM integration (must follow project constraints)
@@ -37,8 +37,8 @@
   - Candidates: `{ "id": <doc_id>, "candidates": [<class_id>...] }`
   - Silver: `{ "id", "text", "labels": [..], "conf": <float> }`
 - Label count rule: every final output must contain **exactly 2 or 3** labels per doc.
-- Taxonomy handling: inference expands a chosen leaf into a short parent→child path via `child2parents`.
-- Important: `src/verify.py` currently validates header `pid,labels` with comma-separated labels, while `src/inference.py` writes header `id,label`. If you change either, keep them in sync or the pipeline will fail at the verify stage.
+- Taxonomy handling: inference expands a chosen label into a short ancestry chain via `child2parents`.
+- Submission header is `id,label`.
 
 ## Tests/status
 - `tests/` exists but currently references modules not present in `src/` (e.g., `llm_labeling`, `postprocess`). Prefer validating changes by running `python run_pipeline.py` and `python src/verify.py` until tests are aligned.

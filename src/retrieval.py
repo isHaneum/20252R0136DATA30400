@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
@@ -221,6 +222,7 @@ def build_candidates_hybrid(
 
 
 def write_candidates_jsonl(path: str, candidates: Dict[str, List[str]]) -> None:
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         for doc_id, cands in candidates.items():
             f.write(json.dumps({"id": doc_id, "candidates": cands}, ensure_ascii=False) + "\n")

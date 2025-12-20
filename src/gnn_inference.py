@@ -207,7 +207,7 @@ def predict(
     id2label: Dict[int, str],
     child2parents: Dict[str, List[str]],
     parent2children: Dict[str, List[str]],
-    max_len: int = 4,
+    max_len: int = 3,
 ) -> List[Tuple[int, List[str]]]:
     """
     Perform inference and return predictions
@@ -217,59 +217,54 @@ def predict(
     """
 
     def _select_labels_from_probs(prob_vec: torch.Tensor) -> List[str]:
-        """Selection rule (matches baseline inference.py):
+        """Return exactly 2 or 3 labels.
 
-        - Anchor on top-1 predicted label (primary)
-                - Output the taxonomy chain in bottom-up order: [primary, parent, grandparent] (up to 3)
-                - If any *leaf* label has prob >= 0.4, add exactly ONE extra label:
-                    the highest-prob leaf not already included.
-                - Always return between 2 and `max_len` labels
+        Rule:
+        - Start from top-1 predicted label (primary).
+        - Expand upward using the taxonomy (parent, grandparent) up to 3 labels.
+        - If we still have fewer than the requested count, add one extra *leaf* label
+          (highest probability among leaves not already included) with prob >= 0.4.
+        - If still short (e.g., taxonomy has no parent and no confident extra leaf), pad by duplication.
         """
-        max_labels = 3  # Ensure max_labels is 3 by default
-        if max_labels < 2:
-            max_labels = 2
+
+        max_labels = int(max_len)
+        if max_labels not in (2, 3):
+            max_labels = 3
+
         order = torch.argsort(prob_vec, descending=True)
         primary = str(id2label[int(order[0].item())])
 
-        # Build taxonomy chain up to 3 (primary->parent->grandparent)
-        path: List[str] = [primary]
+        # Build taxonomy chain up to 3 (primary -> parent -> grandparent)
+        chosen: List[str] = [primary]
         cur = primary
-        while len(path) < min(3, max_labels):
+        while len(chosen) < min(3, max_labels):
             parents = child2parents.get(cur) or []
             if not parents:
                 break
-            cur = str(parents[0])
-            if cur in path:
+            parent = str(parents[0])
+            if parent in chosen:
                 break
-            path.append(cur)
-        chosen = list(path)
+            chosen.append(parent)
+            cur = parent
 
-        # Ensure at least 2 labels and at most 3 labels initially
-        if len(chosen) < 2:
-            chosen.append(primary)
-        chosen = chosen[:3]  # Limit to 3 labels initially
-
-        # Add ONE extra label if prob >= 0.6 and we have room (<4 labels total)
-        if len(chosen) < 4:
+        # Add a single extra leaf label if we need more
+        if len(chosen) < max_labels:
             included = set(chosen)
             for idx in order[1:]:
                 cid = str(id2label[int(idx.item())])
                 if cid in included:
                     continue
-                # Check if the candidate is a leaf node
+                # leaf: no children
                 if cid in parent2children and len(parent2children.get(cid, [])) > 0:
                     continue
-                if float(prob_vec[int(idx.item())].item()) >= 0.5:  # Update threshold to 0.5 for extra leaf selection
+                if float(prob_vec[int(idx.item())].item()) >= 0.4:
                     chosen.append(cid)
                     break
 
-        if len(chosen) >= max_labels:
-            return chosen[:max_labels]
-        if len(chosen) == 2:
-            return chosen
-        if len(chosen) == 1:
-            return [chosen[0], chosen[0]]
-        return ["0", "1"]
+        # Pad/truncate to exact length
+        while len(chosen) < max_labels:
+            chosen.append(primary)
+        return chosen[:max_labels]
     
     model.eval()
     predictions = []
@@ -289,12 +284,12 @@ def predict(
 
             for i, doc_id in enumerate(doc_ids):
                 labels = _select_labels_from_probs(probs[i])
-                # Enforce 2..max_len.
-                if len(labels) < 2:
-                    labels = labels + labels[:1]
-                labels = labels[: int(max_len) if int(max_len) >= 2 else 2]
-                if len(labels) == 1:
-                    labels = labels + labels
+                # Enforce exactly 2 or 3 labels.
+                if int(max_len) not in (2, 3):
+                    max_len = 3
+                labels = labels[: int(max_len)]
+                while len(labels) < int(max_len):
+                    labels.append(labels[0])
                 predictions.append((doc_id, labels))
     
     return predictions
@@ -314,14 +309,18 @@ def main():
     )
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--max-length", type=int, default=256)
-    parser.add_argument("--top-k", type=int, default=4,
-                        help="Max number of labels to output per document (2, 3, or 4)")
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=3,
+        help="Number of labels to output per document (2 or 3)",
+    )
     parser.add_argument("--student-id", type=str, default="2021320045",
                         help="Student ID for submission filename")
     args = parser.parse_args()
 
-    if args.top_k not in (2, 3, 4):
-        raise SystemExit("--top-k must be 2, 3, or 4")
+    if args.top_k not in (2, 3):
+        raise SystemExit("--top-k must be 2 or 3")
     
     # Load config
     cfg = load_config()

@@ -45,8 +45,8 @@ def main() -> None:
             if not pid:
                 raise RuntimeError("Empty id")
             labels = [x.strip() for x in labs.split(",") if x.strip()]
-            if len(labels) not in (2, 3, 4):
-                raise RuntimeError(f"pid={pid} has {len(labels)} labels (must be 2, 3, or 4)")
+            if len(labels) not in (2, 3):
+                raise RuntimeError(f"pid={pid} has {len(labels)} labels (must be 2 or 3)")
             for lab in labels:
                 if lab not in allowed:
                     raise RuntimeError(f"pid={pid} has invalid label: {lab}")

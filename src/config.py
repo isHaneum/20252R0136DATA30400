@@ -166,13 +166,12 @@ class TrainConfig:
 @dataclass
 class InferConfig:
     batch_size: int = 16
-    # Default selection is taxonomy-aware inference.py logic (when selection != dynamic).
+    # Default selection is taxonomy-aware logic.
     selection: str = "topk"  # topk | threshold | dynamic
-    threshold: float = 0.6  # probability threshold (used by threshold/dynamic and taxonomy extra-leaf)
+    threshold: float = 0.4  # probability threshold for adding an extra leaf label
     drop_ratio: float = 0.65
-    # Allow up to 4 labels by default (taxonomy path up to 3 + 1 extra leaf).
     min_labels: int = 2
-    max_labels: int = 4
+    max_labels: int = 3
     leaf_threshold: float = 0.15  # lower threshold for leaf nodes (more specific)
     prefer_leaves: bool = True  # prioritize leaf nodes in output
 
